@@ -1,6 +1,6 @@
 [package]
 name = "gba-proc-macro"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Lokathor <zefria@gmail.com>", "repnop"]
 edition = "2018"
 license = "Apache2"
