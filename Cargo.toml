@@ -1,0 +1,14 @@
+[package]
+name = "gba-proc-macro"
+version = "0.0.1"
+authors = ["Lokathor <zefria@gmail.com>", "repnop"]
+edition = "2018"
+license = "Apache2"
+
+[lib]
+crate-type = ["proc-macro"]
+
+[dependencies]
+syn = { version="0.15.18", features = ["full"] }
+quote = "0.6.9"
+proc-macro2 = "0.4.20"
