@@ -1,5 +1,6 @@
 [package]
 name = "gba-proc-macro"
+description = "proc macros for the gba crate"
 version = "0.1.0"
 authors = ["Lokathor <zefria@gmail.com>", "repnop"]
 edition = "2018"
