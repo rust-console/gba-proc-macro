@@ -4,7 +4,7 @@ description = "proc macros for the gba crate"
 version = "0.1.0"
 authors = ["Lokathor <zefria@gmail.com>", "repnop"]
 edition = "2018"
-license = "Apache2"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["proc-macro"]
