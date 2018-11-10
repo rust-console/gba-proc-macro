@@ -1,13 +1,13 @@
 [package]
 name = "gba-proc-macro"
 description = "proc macros for the gba crate"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Lokathor <zefria@gmail.com>", "repnop"]
 edition = "2018"
 license = "Apache-2.0"
 
 [lib]
-crate-type = ["proc-macro"]
+proc-macro = true
 
 [dependencies]
 syn = { version="0.15.18", features = ["full"] }
