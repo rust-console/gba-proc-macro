@@ -1,12 +1,14 @@
-use gba_proc_macro::register_bit;
+use gba_proc_macro::*;
 
 #[derive(Debug, Default, Clone, Copy)]
 #[repr(transparent)]
 pub struct Demo(u16);
 
 impl Demo {
-  register_bit!(FIRST_BIT, u16, 0b1, first, read_write);
+  register_bit!(FIRST_BIT, u16, 0b1, first);
 }
+
+newtype!(U16Wrapper, u16);
 
 #[test]
 fn test_first_bit() {
@@ -17,4 +19,10 @@ fn test_first_bit() {
 
   foo.set_first(true);
   assert_eq!(foo.first(), true);
+}
+
+#[test]
+fn test_u16_wrapper() {
+  let a: U16Wrapper = U16Wrapper(1u16);
+  let _b: u16 = a.into();
 }

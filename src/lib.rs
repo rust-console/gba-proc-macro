@@ -11,7 +11,6 @@ struct RegisterBit {
   const_value: Expr,
   const_type: Type,
   get_set_name: Ident,
-  modes: Ident,
 }
 
 impl Parse for RegisterBit {
@@ -23,14 +22,11 @@ impl Parse for RegisterBit {
     let const_value: Expr = input.parse()?;
     input.parse::<Token![,]>()?;
     let get_set_name: Ident = input.parse()?;
-    input.parse::<Token![,]>()?;
-    let modes: Ident = input.parse()?;
     Ok(RegisterBit {
       const_name,
       const_value,
       const_type,
       get_set_name,
-      modes,
     })
   }
 }
@@ -42,17 +38,9 @@ pub fn register_bit(input: TokenStream) -> TokenStream {
     const_value,
     const_type,
     get_set_name,
-    modes,
   } = parse_macro_input!(input as RegisterBit);
 
-  let (read, write) = match modes.to_string().as_ref() {
-    "read" => (true, false),
-    "write" => (false, true),
-    "read_write" => (true, true),
-    _ => panic!(r#"Final arg must be one of "read", "write", or "read_write"."#),
-  };
-
-  let read_fn = if read {
+  let read_fn = {
     let read_name = get_set_name.clone();
 
     quote! {
@@ -60,11 +48,9 @@ pub fn register_bit(input: TokenStream) -> TokenStream {
         (self.0 & Self::#const_name) != 0
       }
     }
-  } else {
-    quote!{}
   };
 
-  let write_fn = if write {
+  let write_fn = {
     let write_name = Ident::new(&format!("set_{}", get_set_name), Span::call_site());
 
     quote! {
@@ -76,8 +62,6 @@ pub fn register_bit(input: TokenStream) -> TokenStream {
         }
       }
     }
-  } else {
-    quote!{}
   };
 
   TokenStream::from(quote! {
@@ -86,5 +70,37 @@ pub fn register_bit(input: TokenStream) -> TokenStream {
     #read_fn
 
     #write_fn
+  })
+}
+
+//////////
+
+struct NewtypeDeclaration {
+  newtype_name: Type,
+  base_type: Type,
+}
+
+impl Parse for NewtypeDeclaration {
+  fn parse(input: ParseStream) -> Result<Self> {
+    let newtype_name: Type = input.parse()?;
+    input.parse::<Token![,]>()?;
+    let base_type: Type = input.parse()?;
+    Ok(NewtypeDeclaration { newtype_name, base_type })
+  }
+}
+
+#[proc_macro]
+pub fn newtype(input: TokenStream) -> TokenStream {
+  let NewtypeDeclaration { newtype_name, base_type } = parse_macro_input!(input as NewtypeDeclaration);
+
+  TokenStream::from(quote! {
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    #[repr(transparent)]
+    pub struct #newtype_name(#base_type);
+    impl From<#newtype_name> for #base_type {
+      fn from(x: #newtype_name) -> #base_type {
+        x.0
+      }
+    }
   })
 }
