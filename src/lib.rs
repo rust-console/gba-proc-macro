@@ -4,7 +4,7 @@ use self::proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{parse_macro_input, Expr, Ident, Token, Type};
+use syn::{parse_macro_input, Expr, Ident, LitStr, Token, Type};
 
 struct RegisterBit {
   const_name: Ident,
@@ -78,6 +78,7 @@ pub fn register_bit(input: TokenStream) -> TokenStream {
 struct NewtypeDeclaration {
   newtype_name: Type,
   base_type: Type,
+  doc_comments: LitStr,
 }
 
 impl Parse for NewtypeDeclaration {
@@ -85,15 +86,30 @@ impl Parse for NewtypeDeclaration {
     let newtype_name: Type = input.parse()?;
     input.parse::<Token![,]>()?;
     let base_type: Type = input.parse()?;
-    Ok(NewtypeDeclaration { newtype_name, base_type })
+    let doc_comments: LitStr = if input.is_empty() {
+      LitStr::new("", Span::call_site())
+    } else {
+      input.parse::<Token![,]>()?;
+      input.parse()?
+    };
+    Ok(NewtypeDeclaration {
+      newtype_name,
+      base_type,
+      doc_comments,
+    })
   }
 }
 
 #[proc_macro]
 pub fn newtype(input: TokenStream) -> TokenStream {
-  let NewtypeDeclaration { newtype_name, base_type } = parse_macro_input!(input as NewtypeDeclaration);
+  let NewtypeDeclaration {
+    newtype_name,
+    base_type,
+    doc_comments,
+  } = parse_macro_input!(input as NewtypeDeclaration);
 
   TokenStream::from(quote! {
+    #[doc = #doc_comments]
     #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
     #[repr(transparent)]
     pub struct #newtype_name(#base_type);

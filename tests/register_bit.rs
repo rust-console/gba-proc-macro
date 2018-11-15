@@ -10,6 +10,8 @@ impl Demo {
 
 newtype!(U16Wrapper, u16);
 
+newtype!(Comment16, u16, "this is a comment");
+
 #[test]
 fn test_first_bit() {
   assert_eq!(Demo::FIRST_BIT, 1u16);
