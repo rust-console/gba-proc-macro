@@ -1,3 +1,5 @@
+#![feature(const_int_wrapping)]
+
 use gba_proc_macro::*;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -8,23 +10,13 @@ impl Demo {
   register_bit!(FIRST_BIT, u16, 0b1, first);
 }
 
-newtype!(U16Wrapper, u16);
-
-newtype!(Comment16, u16, "this is a comment");
-
 #[test]
 fn test_first_bit() {
   assert_eq!(Demo::FIRST_BIT, 1u16);
 
-  let mut foo = Demo::default();
+  let foo = Demo::default();
   assert_eq!(foo.first(), false);
 
-  foo.set_first(true);
-  assert_eq!(foo.first(), true);
-}
-
-#[test]
-fn test_u16_wrapper() {
-  let a: U16Wrapper = U16Wrapper(1u16);
-  let _b: u16 = a.into();
+  let foo_with_first = foo.with_first(true);
+  assert_eq!(foo_with_first.first(), true);
 }

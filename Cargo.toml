@@ -1,7 +1,7 @@
 [package]
 name = "gba-proc-macro"
 description = "proc macros for the gba crate"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Lokathor <zefria@gmail.com>", "repnop"]
 edition = "2018"
 license = "Apache-2.0"

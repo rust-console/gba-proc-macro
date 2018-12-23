@@ -4,7 +4,7 @@ use self::proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{parse_macro_input, Expr, Ident, LitStr, Token, Type};
+use syn::{parse_macro_input, Expr, Ident, Token, Type};
 
 struct RegisterBit {
   const_name: Ident,
@@ -44,22 +44,19 @@ pub fn register_bit(input: TokenStream) -> TokenStream {
     let read_name = get_set_name.clone();
 
     quote! {
-      pub fn #read_name(&self) -> bool {
+      pub const fn #read_name(&self) -> bool {
         (self.0 & Self::#const_name) != 0
       }
     }
   };
 
   let write_fn = {
-    let write_name = Ident::new(&format!("set_{}", get_set_name), Span::call_site());
+    let write_name = Ident::new(&format!("with_{}", get_set_name), Span::call_site());
 
+    // https://graphics.stanford.edu/~seander/bithacks.html#ConditionalSetOrClearBitsWithoutBranching
     quote! {
-      pub fn #write_name(&mut self, bit: bool) {
-        if bit {
-          self.0 |= Self::#const_name;
-        } else {
-          self.0 &= !Self::#const_name;
-        }
+      pub const fn #write_name(self, bit: bool) -> Self {
+        Self(self.0 ^ (((#const_type::wrapping_sub(0, bit as #const_type) ^ self.0) & #const_value)))
       }
     }
   };
@@ -73,7 +70,11 @@ pub fn register_bit(input: TokenStream) -> TokenStream {
   })
 }
 
-//////////
+//
+
+/*
+
+// this is a macro_rules macro for now.
 
 struct NewtypeDeclaration {
   newtype_name: Type,
@@ -120,3 +121,4 @@ pub fn newtype(input: TokenStream) -> TokenStream {
     }
   })
 }
+*/
