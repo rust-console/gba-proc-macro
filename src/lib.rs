@@ -162,14 +162,17 @@ pub fn bool_bits(input: TokenStream) -> TokenStream {
     let with_name = Ident::new(&format!("with_{}", name), Span::call_site());
     let more_tokens: TokenStream = TokenStream::from(quote! {
 
+      #[allow(missing_docs)]
       #[allow(clippy::identity_op)]
       pub const #const_name: #wrapped_type = 1 << #bit;
 
+      #[allow(missing_docs)]
       pub const fn #read_name(self) -> bool {
         (self.0 & Self::#const_name) != 0
       }
 
       // https://graphics.stanford.edu/~seander/bithacks.html#ConditionalSetOrClearBitsWithoutBranching
+      #[allow(missing_docs)]
       pub const fn #with_name(self, bit: bool) -> Self {
         Self(self.0 ^ (((#wrapped_type::wrapping_sub(0, bit as #wrapped_type) ^ self.0) & Self::#const_name)))
       }
@@ -514,13 +517,16 @@ pub fn multi_bits(input: TokenStream) -> TokenStream {
         let with_name = Ident::new(&format!("with_{}", name), Span::call_site());
         let more_tokens: TokenStream = TokenStream::from(quote! {
 
+          #[allow(missing_docs)]
           #[allow(clippy::identity_op)]
           pub const #mask_name: #wrapped_type = ((1<<(#width))-1) << #base;
 
+          #[allow(missing_docs)]
           pub const fn #read_name(self) -> #wrapped_type {
             (self.0 & Self::#mask_name) >> #base
           }
 
+          #[allow(missing_docs)]
           pub const fn #with_name(self, #read_name: #wrapped_type) -> Self {
             Self((self.0 & !Self::#mask_name) | ((#read_name << #base) & Self::#mask_name))
           }
@@ -542,13 +548,16 @@ pub fn multi_bits(input: TokenStream) -> TokenStream {
         // add many, but not all, of our tokens
         let more_tokens: TokenStream = TokenStream::from(quote! {
 
+          #[allow(missing_docs)]
           #[allow(clippy::identity_op)]
           pub const #mask_name: #wrapped_type = ((1<<(#width+1))-1) << #base;
 
+          #[allow(missing_docs)]
           pub const fn #with_name(self, #read_name: #enum_type_ident) -> Self {
             Self((self.0 & !Self::#mask_name) | (((#read_name as #wrapped_type) << #base) & Self::#mask_name))
           }
 
+          #[allow(missing_docs)]
           pub fn #read_name(self) -> #enum_type_ident
         });
         output.extend(more_tokens);
