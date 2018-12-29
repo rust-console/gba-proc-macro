@@ -2,79 +2,61 @@
 
 use gba_proc_macro::*;
 
-#[derive(Debug, Default, Clone, Copy)]
-#[repr(transparent)]
-pub struct BoolBitsDemo(u16);
-
-impl BoolBitsDemo {
-  bool_bits!(
-    u16,
-    [
-      (3, cgb_mode),
-      (4, page1_enabled),
-      (5, hblank_interval_free),
-      (6, object_memory_1d),
-      (7, force_blank),
-      (8, display_bg0),
-      (9, display_bg1)
-    ]
-  );
-}
-
-#[test]
-fn test_bool_bits() {
-  // test our bit constant
-  assert_eq!(BoolBitsDemo::CGB_MODE, 1 << 3);
-
-  let foo = BoolBitsDemo::default();
-  assert_eq!(foo.cgb_mode(), false);
-
-  // test writing and reading
-  let foo_with_cgb = foo.with_cgb_mode(true);
-  assert_eq!(foo_with_cgb.cgb_mode(), true);
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u16)]
-pub enum SizeEnum {
-  Small,
-  Medium,
-  Large,
+#[repr(u32)]
+pub enum DisplayMode {
+  Mode0 = 0,
+  Mode1 = 1,
+  Mode2 = 2,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 #[repr(transparent)]
-pub struct MultiBitsDemo(u16);
+pub struct PhantomFieldsDemo(u32);
 
-impl MultiBitsDemo {
-  multi_bits!(
-    u16,
-    [
-      (0, 2, priority),
-      (2, 2, cbb),
-      (8, 5, sbb),
-      (14, 2, the_size, SizeEnum, Small, Medium, Large)
-    ]
-  );
+impl PhantomFieldsDemo {
+  phantom_fields! {
+    self.0: u32,
+    /// enum_example docs
+    enum_example: 0-2=DisplayMode<Mode0, Mode1, Mode2>,
+    bool_example: 3,
+    int_example: 6-7,
+    enum_example2: 10-12=DisplayMode<Mode0, Mode1, Mode2>,
+  }
 }
 
 #[test]
-fn test_multi_bits() {
-  // check mask creation
-  assert_eq!(MultiBitsDemo::CBB_MASK, 0b11 << 2);
+fn enum_example_test() {
+  assert_eq!(PhantomFieldsDemo::ENUM_EXAMPLE_MASK, 0b111);
+  for &dm in [DisplayMode::Mode0, DisplayMode::Mode1, DisplayMode::Mode2].iter() {
+    assert_eq!(PhantomFieldsDemo(dm as u32).enum_example(), dm);
+    assert_eq!(PhantomFieldsDemo(0).with_enum_example(dm).enum_example(), dm);
+  }
+}
 
-  let foo = MultiBitsDemo::default();
-  assert_eq!(foo.cbb(), 0);
+#[test]
+fn bool_example_test() {
+  assert_eq!(PhantomFieldsDemo::BOOL_EXAMPLE_BIT, 1 << 3);
+  assert!(!PhantomFieldsDemo(0).bool_example());
+  assert!(PhantomFieldsDemo(PhantomFieldsDemo::BOOL_EXAMPLE_BIT).bool_example());
+  assert!(PhantomFieldsDemo(0).with_bool_example(true).bool_example());
+}
 
-  // check writing and reading
-  let foo_with_cbb = foo.with_cbb(3);
-  assert_eq!(foo_with_cbb.cbb(), 3);
+#[test]
+fn int_example_test() {
+  assert_eq!(PhantomFieldsDemo::INT_EXAMPLE_MASK, 0b11 << 6);
+  assert_eq!(PhantomFieldsDemo(0).int_example(), 0);
+  assert_eq!(PhantomFieldsDemo(PhantomFieldsDemo::INT_EXAMPLE_MASK).int_example(), 0b11);
+  for i in 0..=0b11 {
+    assert_eq!(PhantomFieldsDemo(0).with_int_example(i).int_example(), i);
+  }
+}
 
-  // check overflows are masked properly
-  let foo_with_cbb2 = foo.with_cbb(5);
-  assert_eq!(foo_with_cbb2.cbb(), 1);
-
-  // check enum write and read
-  let foo_with_size = foo.with_the_size(SizeEnum::Medium);
-  assert_eq!(foo_with_size.the_size(), SizeEnum::Medium);
+#[test]
+fn enum_example2_test() {
+  assert_eq!(PhantomFieldsDemo::ENUM_EXAMPLE2_MASK, 0b111 << 10);
+  for &dm in [DisplayMode::Mode0, DisplayMode::Mode1, DisplayMode::Mode2].iter() {
+    assert_eq!(PhantomFieldsDemo((dm as u32) << 10).enum_example2(), dm);
+    assert_eq!(PhantomFieldsDemo(0).with_enum_example2(dm).enum_example2(), dm);
+  }
 }
