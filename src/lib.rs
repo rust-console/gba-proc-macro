@@ -1,17 +1,23 @@
 // Note(Lokathor): this extern crate is necessary even in 2018 for whatever
 // reason that I'm sure is stupid.
 extern crate proc_macro;
+extern crate rand;
 
 use core::str::FromStr;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
+use rand::{Rng, SeedableRng};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 use syn::{
-  parse::{Parse, ParseStream, Result},
+  parse::{self, Parse, ParseStream, Result},
   parse_macro_input,
   spanned::Spanned,
-  Attribute, Error, Ident, LitInt, Token, Type, TypePath,
+  Attribute, Error, Ident, ItemFn, LitInt, ReturnType, Token, Type, TypePath, Visibility,
 };
+
+static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 // Phantom Fields
 
@@ -264,4 +270,103 @@ pub fn phantom_fields(input: TokenStream) -> TokenStream {
   }
 
   TokenStream::from_str(&out_text).map_err(|e| panic!("{:?}", e)).unwrap()
+}
+
+/// Attribute to declare the entry point of the program.
+///
+/// **IMPORTANT**: This attribute must appear exactly *once* in the dependency graph.  Also, if you
+/// are using Rust 1.30 the attribute must be used on a reachable item (i.e. there must be no
+/// private modules between the item and the root of the crate); if the item is in the root of the
+/// crate you'll be fine.  This reachability restriction doesn't apply to Rust 1.31 onwards.
+///
+/// The specified function will be called by the crt0 *after* RAM has been initialized.  It must
+/// take no arguments, and must be divergent (in other words, its type must be either `fn() -> !`
+/// or `unsafe fn() -> !`).  The program can't reference the entry point, much less invoke it.
+///
+/// # Example
+///
+/// ``` no_run
+/// # #![no_main]
+/// # use gba_proc_macro::entry;
+/// #[entry]
+/// fn main() -> ! {
+///     loop {
+///         /* .. */
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
+  let f = parse_macro_input!(input as ItemFn);
+
+  // check the function signature
+  let valid_signature = f.constness.is_none()
+    && f.vis == Visibility::Inherited
+    && f.abi.is_none()
+    && f.decl.inputs.is_empty()
+    && f.decl.generics.params.is_empty()
+    && f.decl.generics.where_clause.is_none()
+    && f.decl.variadic.is_none()
+    && match f.decl.output {
+      ReturnType::Default => false,
+      ReturnType::Type(_, ref ty) => match **ty {
+        Type::Never(_) => true,
+        _ => false,
+      },
+    };
+
+  if !valid_signature {
+    return parse::Error::new(f.span(), "`#[entry]` function must have signature `[unsafe] fn() -> !`")
+      .to_compile_error()
+      .into();
+  }
+
+  if !args.is_empty() {
+    return parse::Error::new(Span::call_site(), "This attribute accepts no arguments")
+      .to_compile_error()
+      .into();
+  }
+
+  // XXX should we blacklist other attributes?
+  let attrs = f.attrs;
+  let block = f.block;
+  let hash = random_ident();
+  let unsafety = f.unsafety;
+
+  quote!(
+      #[export_name = "main"]
+      #(#attrs)*
+      pub #unsafety fn #hash() -> ! #block
+  )
+  .into()
+}
+
+// Creates a random identifier
+fn random_ident() -> Ident {
+  let secs = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+
+  let count: u64 = CALL_COUNT.fetch_add(1, Ordering::SeqCst) as u64;
+  let mut seed: [u8; 16] = [0; 16];
+
+  for (i, v) in seed.iter_mut().take(8).enumerate() {
+    *v = ((secs >> (i * 8)) & 0xFF) as u8
+  }
+
+  for (i, v) in seed.iter_mut().skip(8).enumerate() {
+    *v = ((count >> (i * 8)) & 0xFF) as u8
+  }
+
+  let mut rng = rand::rngs::SmallRng::from_seed(seed);
+  Ident::new(
+    &(0..16)
+      .map(|i| {
+        if i == 0 || rng.gen() {
+          ('a' as u8 + rng.gen::<u8>() % 25) as char
+        } else {
+          ('0' as u8 + rng.gen::<u8>() % 10) as char
+        }
+      })
+      .collect::<String>(),
+    Span::call_site(),
+  )
 }
