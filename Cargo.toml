@@ -13,3 +13,7 @@ proc-macro = true
 syn = { version="0.15.23", features = ["full", "extra-traits"] }
 quote = "0.6.9"
 proc-macro2 = "0.4.24"
+
+[dependencies.rand]
+version = "0.5.5"
+default-features = false
