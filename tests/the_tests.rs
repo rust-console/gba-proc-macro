@@ -1,4 +1,3 @@
-#![feature(const_int_wrapping)]
 
 use gba_proc_macro::*;
 
